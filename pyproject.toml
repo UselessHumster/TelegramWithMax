@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "telegram-with-max"
+version = "0.1.0"
+description = "Write one set of bot handlers for Telegram and MAX"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "UselessHumster" }]
+dependencies = [
+    "aiogram>=3.30,<4",
+    "maxapi>=1.2,<2",
+]
+
+[project.urls]
+Repository = "https://github.com/UselessHumster/TelegramWithMax"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<10",
+    "pytest-asyncio>=1.2,<2",
+    "ruff>=0.12,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/telegram_with_max"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
