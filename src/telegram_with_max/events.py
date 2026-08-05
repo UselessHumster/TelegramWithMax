@@ -18,11 +18,15 @@ class UnifiedMessage(ABC):
         user_id: int,
         chat_id: int,
         text: str | None,
+        display_name: str,
+        username: str | None,
         raw: Any,
     ) -> None:
         self.user_id = user_id
         self.chat_id = chat_id
         self.text = text
+        self.display_name = display_name
+        self.username = username
         self.raw = raw
 
     @property
@@ -68,6 +72,8 @@ class TelegramMessage(UnifiedMessage):
             user_id=message.from_user.id,
             chat_id=message.chat.id,
             text=message.text,
+            display_name=message.from_user.full_name,
+            username=message.from_user.username,
             raw=message,
         )
 
@@ -139,10 +145,15 @@ class MaxMessage(UnifiedMessage):
             raise ValueError("MAX message requires user_id and chat_id")
 
         body = getattr(message, "body", None)
+        sender = getattr(message, "sender", None)
         super().__init__(
             user_id=resolved_user_id,
             chat_id=resolved_chat_id,
             text=getattr(body, "text", None),
+            display_name=(
+                getattr(sender, "full_name", None) or f"MAX user {resolved_user_id}"
+            ),
+            username=getattr(sender, "username", None),
             raw=raw if raw is not None else message,
         )
         self.message = message
@@ -188,6 +199,56 @@ class MaxMessage(UnifiedMessage):
 
     async def delete(self) -> Any:
         return await self.message.delete()
+
+
+class MaxStartedMessage(UnifiedMessage):
+    """Message-compatible facade for a MAX ``bot_started`` event."""
+
+    platform = Platform.MAX
+
+    def __init__(self, event: Any) -> None:
+        super().__init__(
+            user_id=event.user.user_id,
+            chat_id=event.chat_id,
+            text="/start",
+            display_name=event.user.full_name,
+            username=event.user.username,
+            raw=event,
+        )
+
+    async def answer(
+        self,
+        text: str,
+        *,
+        reply_markup: InlineKeyboard | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        return await self.raw.send(
+            text,
+            attachments=to_max_attachments(reply_markup),
+            **kwargs,
+        )
+
+    async def reply(
+        self,
+        text: str,
+        *,
+        reply_markup: InlineKeyboard | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        return await self.answer(text, reply_markup=reply_markup, **kwargs)
+
+    async def edit_text(
+        self,
+        text: str,
+        *,
+        reply_markup: InlineKeyboard | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        raise RuntimeError("A bot_started event has no message to edit")
+
+    async def delete(self) -> Any:
+        raise RuntimeError("A bot_started event has no message to delete")
 
 
 class UnifiedCallback(ABC):

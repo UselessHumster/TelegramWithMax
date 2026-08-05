@@ -14,10 +14,16 @@ from maxapi import Router as MaxRouter
 from maxapi.context import MemoryContext as MaxMemoryContext
 from maxapi.filters import F as MaxF
 from maxapi.filters import StateFilter as MaxStateFilter
+from maxapi.types import BotStarted, MessageCallback, MessageCreated
 from maxapi.types import Command as MaxCommand
-from maxapi.types import MessageCallback, MessageCreated
 
-from .events import MaxCallback, MaxMessage, TelegramCallback, TelegramMessage
+from .events import (
+    MaxCallback,
+    MaxMessage,
+    MaxStartedMessage,
+    TelegramCallback,
+    TelegramMessage,
+)
 from .fsm import State, UnifiedContext, state_value
 from .platform import Platform
 
@@ -91,6 +97,25 @@ class Router:
 
         return decorator
 
+    def started(
+        self,
+        *,
+        with_state: bool = False,
+        platforms: Iterable[Platform] | None = None,
+    ) -> Callable[[Handler], Handler]:
+        """Handle Telegram/MAX ``/start`` and the MAX ``bot_started`` event."""
+        enabled = _platforms(platforms)
+
+        def decorator(handler: Handler) -> Handler:
+            if Platform.TELEGRAM in enabled:
+                self._register_telegram_message(handler, ("start",), None, with_state)
+            if Platform.MAX in enabled:
+                self._register_max_message(handler, ("start",), None, with_state)
+                self._register_max_started(handler, with_state)
+            return handler
+
+        return decorator
+
     def _register_telegram_message(
         self,
         handler: Handler,
@@ -146,6 +171,22 @@ class Router:
                 return await handler(MaxMessage(message))
 
         self.max.message_created(*filters)(wrapped)
+
+    def _register_max_started(self, handler: Handler, with_state: bool) -> None:
+        if with_state:
+
+            async def wrapped(
+                event: BotStarted,
+                context: MaxMemoryContext,
+            ) -> Any:
+                return await handler(MaxStartedMessage(event), UnifiedContext(context))
+
+        else:
+
+            async def wrapped(event: BotStarted) -> Any:
+                return await handler(MaxStartedMessage(event))
+
+        self.max.bot_started()(wrapped)
 
     def _register_telegram_callback(
         self,

@@ -23,6 +23,17 @@ def test_handlers_are_registered_for_both_platforms():
     assert len(router.max.event_handlers) == 2
 
 
+def test_started_handler_covers_commands_and_max_started_event():
+    router = Router(name="started")
+
+    @router.started(with_state=True)
+    async def started_handler(message, state):
+        return None
+
+    assert len(router.telegram.message.handlers) == 1
+    assert len(router.max.event_handlers) == 2
+
+
 def test_handler_can_be_limited_to_one_platform():
     router = Router()
 

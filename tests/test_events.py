@@ -14,7 +14,11 @@ from telegram_with_max.events import (
 
 def telegram_message_raw():
     return SimpleNamespace(
-        from_user=SimpleNamespace(id=10),
+        from_user=SimpleNamespace(
+            id=10,
+            full_name="Telegram User",
+            username="tg_user",
+        ),
         chat=SimpleNamespace(id=20),
         text="hello",
         answer=AsyncMock(return_value="answered"),
@@ -32,6 +36,10 @@ async def test_telegram_message_exposes_common_fields_and_methods():
 
     assert message.platform is Platform.TELEGRAM
     assert (message.user_id, message.chat_id, message.text) == (10, 20, "hello")
+    assert (message.display_name, message.username) == (
+        "Telegram User",
+        "tg_user",
+    )
     assert await message.answer("answer", reply_markup=keyboard) == "answered"
     assert await message.reply("reply") == "replied"
     assert await message.edit_text("edit") == "edited"
@@ -44,6 +52,7 @@ async def test_telegram_message_exposes_common_fields_and_methods():
 async def test_max_message_exposes_common_fields_and_methods():
     native_message = SimpleNamespace(
         body=SimpleNamespace(text="hello max"),
+        sender=SimpleNamespace(full_name="MAX User", username="max_user"),
         answer=AsyncMock(return_value="answered"),
         reply=AsyncMock(return_value="replied"),
         edit=AsyncMock(return_value="edited"),
@@ -54,6 +63,7 @@ async def test_max_message_exposes_common_fields_and_methods():
 
     assert message.platform is Platform.MAX
     assert (message.user_id, message.chat_id, message.text) == (40, 30, "hello max")
+    assert (message.display_name, message.username) == ("MAX User", "max_user")
     assert await message.answer("answer") == "answered"
     assert await message.reply("reply") == "replied"
     assert await message.edit_text("edit") == "edited"

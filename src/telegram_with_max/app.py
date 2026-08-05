@@ -11,6 +11,8 @@ from maxapi import Bot as MaxBot
 from maxapi import Dispatcher as MaxDispatcher
 from maxapi.enums import TextFormat as MaxTextFormat
 
+from .keyboards import InlineKeyboard, to_max_attachments, to_telegram_markup
+from .platform import Platform
 from .router import Router
 
 
@@ -35,7 +37,47 @@ class App:
         self.max_dispatcher.include_routers(router.max)
         self._routers.add(router_id)
 
+    async def send_message(
+        self,
+        *,
+        platform: Platform,
+        chat_id: int,
+        text: str,
+        reply_markup: InlineKeyboard | None = None,
+        **kwargs: object,
+    ) -> object:
+        """Send a message without exposing a platform-specific bot client."""
+        if platform is Platform.TELEGRAM:
+            return await self.telegram_bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                reply_markup=to_telegram_markup(reply_markup),
+                **kwargs,
+            )
+        if platform is Platform.MAX:
+            return await self.max_bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                attachments=to_max_attachments(reply_markup),
+                **kwargs,
+            )
+        raise ValueError(f"Unsupported platform: {platform!r}")
+
+    async def _ensure_max_polling_available(self) -> None:
+        subscriptions = await self.max_bot.get_subscriptions()
+        if subscriptions.subscriptions:
+            urls = ", ".join(item.url for item in subscriptions.subscriptions)
+            raise RuntimeError(
+                "MAX polling cannot start while webhook subscriptions are active: "
+                f"{urls}"
+            )
+
     async def run_polling(self) -> None:
+        try:
+            await self._ensure_max_polling_available()
+        except Exception:
+            await self.close()
+            raise
         tasks = [
             asyncio.create_task(
                 self.telegram_dispatcher.start_polling(self.telegram_bot),
