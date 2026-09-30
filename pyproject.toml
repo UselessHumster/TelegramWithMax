@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "telegram-with-max"
-version = "0.2.0"
+version = "0.2.1"
 description = "Write one set of bot handlers for Telegram and MAX"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,6 +12,7 @@ authors = [{ name = "UselessHumster" }]
 dependencies = [
     "aiogram>=3.30,<4",
     "maxapi>=1.2,<2",
+    "aiohttp-socks>=0.10,<1",
 ]
 
 [project.urls]

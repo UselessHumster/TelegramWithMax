@@ -14,6 +14,17 @@ def make_app():
     )
 
 
+@pytest.mark.asyncio
+async def test_telegram_proxy_is_configured():
+    app = App(
+        telegram_token="123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi",
+        max_token="max-token",
+        telegram_proxy="http://127.0.0.1:18080",
+    )
+    assert app.telegram_bot.session.proxy == "http://127.0.0.1:18080"
+    await app.close()
+
+
 def test_app_includes_native_routers_once():
     app = make_app()
     router = Router()

@@ -6,6 +6,7 @@ from contextlib import suppress
 from aiogram import Bot as TelegramBot
 from aiogram import Dispatcher as TelegramDispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode as TelegramParseMode
 from maxapi import Bot as MaxBot
 from maxapi import Dispatcher as MaxDispatcher
@@ -19,9 +20,13 @@ from .router import Router
 class App:
     """Owns and runs Telegram and MAX polling runtimes."""
 
-    def __init__(self, *, telegram_token: str, max_token: str) -> None:
+    def __init__(
+        self, *, telegram_token: str, max_token: str,
+        telegram_proxy: str | None = None,
+    ) -> None:
         self.telegram_bot = TelegramBot(
             token=telegram_token,
+            session=AiohttpSession(proxy=telegram_proxy),
             default=DefaultBotProperties(parse_mode=TelegramParseMode.HTML),
         )
         self.max_bot = MaxBot(token=max_token, format=MaxTextFormat.HTML)
